@@ -6,7 +6,7 @@
         <script src="src/script.ts" type="module"></script>
     </head>
     <body>
-      <h1>Display your Spotify profile data</h1>
+      <h1>Sonic Voyage Prototype</h1>
 
       <section id="profile">
       <h2>Logged in as <span id="displayName"></span></h2>
@@ -16,9 +16,22 @@
           <li>Email: <span id="email"></span></li>
           <li>Spotify URI: <a id="uri" href="#"></a></li>
           <li>Link: <a id="url" href="#"></a></li>
-          <li>Profile Image: <span id="imgUrl"></span></li>
+          <!-- <li>Profile Image: <span id="imgUrl"></span></li> -->
       </ul>
+
+      <!-- Include the HTML list for recent tracks -->
+      <div id="recentTracksContainer">
+        <h2>Recent Tracks</h2>
+        <ul id="recentTracks"></ul>
+      </div>
+
       </section>
+
+      <div id="tempodiv">
+        <h2>Average Tempo for Recent Tracks: </h2> 
+        <span id="tempo"></span>
+      </div>
       
+
     </body>
 </html>
