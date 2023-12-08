@@ -26,9 +26,15 @@ if (!code) {
   if (recentTracks) {
     populateTracks(recentTracks);
   }
-  
+
   // Call the function with the recent tracks and the access token
   displayAverageTempo(recentTracks, accessToken);
+  const features = await getTrackFeatures(recentTracks, accessToken);
+  const properties = ['acousticness', 'danceability', 'energy', 'instrumentalness', 
+                      'liveness', 'loudness', 'speechiness', 'tempo', 'valence'];
+  const featuresMap = await getAverage(properties, features);
+  console.log(featuresMap);
+  populateSongTable(properties, featuresMap);
 }
 
 export async function redirectToAuthCodeFlow(clientId: string) {
@@ -50,9 +56,9 @@ export async function getAccessToken(clientId: string, code: string): Promise<st
   params.append("redirect_uri", "http://localhost:5173/callback");
 
   const result = await fetch("https://accounts.spotify.com/api/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params
   });
 
   const { access_token } = await result.json();
@@ -66,7 +72,7 @@ export async function getAccessToken(clientId: string, code: string): Promise<st
  */
 async function fetchProfile(token: string) {
   const result = await fetch("https://api.spotify.com/v1/me", {
-      method: "GET", headers: { Authorization: `Bearer ${token}` }
+    method: "GET", headers: { Authorization: `Bearer ${token}` }
   });
 
   if (result.ok) {
@@ -96,23 +102,24 @@ async function fetchProfile(token: string) {
  * @param profile The user's profile data.
  */
 function populateUI(profile: any) {
-  document.getElementById("displayName")!.innerText = profile.display_name;
+  const firstName = profile.display_name.split(" ")[0];
+  document.getElementById("displayName")!.innerText = firstName;
   if (profile.images[0]) {
-      const profileImage = new Image();
-      profileImage.src = profile.images[1].url;
-      document.getElementById("avatar")!.appendChild(profileImage);
+    const profileImage = new Image();
+    profileImage.src = profile.images[1].url;
+    document.getElementById("avatar")!.appendChild(profileImage);
   }
-  document.getElementById("id")!.innerText = profile.id;
-  document.getElementById("email")!.innerText = profile.email;
-  document.getElementById("uri")!.innerText = profile.uri;
-  document.getElementById("uri")!.setAttribute("href", profile.external_urls.spotify);
-  document.getElementById("url")!.innerText = profile.href;
-  document.getElementById("url")!.setAttribute("href", profile.href);
+  // document.getElementById("id")!.innerText = profile.id;
+  // document.getElementById("email")!.innerText = profile.email;
+  // document.getElementById("uri")!.innerText = profile.uri;
+  // document.getElementById("uri")!.setAttribute("href", profile.external_urls.spotify);
+  // document.getElementById("url")!.innerText = profile.href;
+  // document.getElementById("url")!.setAttribute("href", profile.href);
   // document.getElementById("imgUrl")!.innerText = profile.images[0]?.url ?? '(no profile image)';
 }
 
 // Function to fetch recent tracks
-async function fetchRecentTracks(token : string) {
+async function fetchRecentTracks(token: string) {
   const result = await fetch("https://api.spotify.com/v1/me/player/recently-played", {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
@@ -206,5 +213,107 @@ async function displayAverageTempo(recentTracks: any, token: string) {
     document.getElementById("tempo")!.innerText = tempo.toFixed(2); // Assuming you want to display the tempo with two decimal places
   } catch (error) {
     console.error("Error getting average tempo:", error);
+  }
+}
+
+// Function to fetch audio features for tracks
+async function getTrackFeatures(recentTracks: { items: any[]; }, token: string) {
+  const trackIds = recentTracks.items.map((track) => track.track.id);
+
+  if (trackIds.length === 0) {
+    console.error("No track IDs available for recently played tracks.");
+    return;
+  }
+
+  const maxIdsPerRequest = 100;
+  const trackChunks = [];
+  for (let i = 0; i < trackIds.length; i += maxIdsPerRequest) {
+    trackChunks.push(trackIds.slice(i, i + maxIdsPerRequest));
+  }
+
+  const featuresArray = [];
+  for (const chunk of trackChunks) {
+    const idsQueryString = chunk.join(",");
+    const audioFeaturesUrl = `https://api.spotify.com/v1/audio-features?ids=${idsQueryString}`;
+
+    const audioFeaturesResult = await fetch(audioFeaturesUrl, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!audioFeaturesResult.ok) {
+      console.error(`Error fetching audio features: ${audioFeaturesResult.statusText}`);
+      return;
+    }
+
+    const audioFeaturesData = await audioFeaturesResult.json();
+    featuresArray.push(...audioFeaturesData.audio_features);
+  }
+  return featuresArray;
+}
+
+async function getAverage(properties: string[], features: any) {
+  const featuresMap = new Map<string, number>();
+  for (const property of properties) {
+
+    // Extract the property values from the features array
+    const propertyValues = features.map((feature: { [x: string]: any; }) => feature[property]);
+
+    // Calculate the average value
+    const average = propertyValues.reduce((sum: number, value: number) => sum + value, 0) / propertyValues.length;
+
+    featuresMap.set(property, average);
+    // console.log(`Average ${property}:`, average);
+  }
+  return featuresMap;
+}
+
+function toStringPercent(n : number) {
+  return (n * 100).toFixed(2) + '%';
+}
+
+function makeSelector(filter: string, properties: string[]) {
+  let selector = ''; // Initialize an empty string
+  for (let i = 0; i < properties.length; i++) {
+    selector += '#' + makeName(filter, properties[i]);
+    if (i < properties.length - 1) {
+      selector += ', ';
+    }
+  }
+  return selector;
+}
+
+function makeName(filter :string, property : string) {
+  return filter + property.charAt(0).toUpperCase() + property.slice(1);
+}
+
+// Function to populate the table with song analysis data
+async function populateSongTable(properties : string[], features: Map<string, number>) {
+
+  // Check if the data is available
+  if (!features) {
+    console.error('Failed to fetch song analysis data');
+    return;
+  }
+  
+  const selector = makeSelector('recent', properties);
+
+  console.log('selector: ' + selector);
+
+  // Get the table cells
+  let recentCells = document.querySelectorAll(selector);
+
+  console.log('recentCellLength: ' + recentCells.length);
+  // const topShortCells = document.querySelectorAll(await makeSelector(properties, 'topShort'));
+  // const topLongCells = document.querySelectorAll(await makeSelector(properties, 'topLong'));
+
+  // Loop through all table descriptions and populate with data
+  for (let i = 0; i < recentCells.length; i++) {
+    let data = features.get(properties[i]);
+    if (data) {
+      const dataString = properties[i] == 'loudness' || properties[i] == 'tempo' ? 
+                          data.toFixed(2) : toStringPercent(data);
+      recentCells[i].textContent = dataString;
+    }
   }
 }

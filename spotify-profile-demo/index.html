@@ -1,37 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <title>My Spotify Profile!</title>
-        <script src="src/script.ts" type="module"></script>
-    </head>
-    <body>
-      <h1>Sonic Voyage Prototype</h1>
 
-      <section id="profile">
-      <h2>Logged in as <span id="displayName"></span></h2>
-      <span id="avatar"></span>
-      <ul>
-          <li>User ID: <span id="id"></span></li>
-          <li>Email: <span id="email"></span></li>
-          <li>Spotify URI: <a id="uri" href="#"></a></li>
-          <li>Link: <a id="url" href="#"></a></li>
-          <!-- <li>Profile Image: <span id="imgUrl"></span></li> -->
-      </ul>
+<head>
+  <meta charset="utf-8">
+  <title>SONIC VOYAGE</title>
+  <script src="src/script.ts" type="module"></script>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
 
-      <!-- Include the HTML list for recent tracks -->
-      <div id="recentTracksContainer">
-        <h2>Recent Tracks</h2>
-        <ul id="recentTracks"></ul>
-      </div>
+    th,
+    td {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
 
-      </section>
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
 
-      <div id="tempodiv">
-        <h2>Average Tempo for Recent Tracks: </h2> 
-        <span id="tempo"></span>
-      </div>
-      
+<body>
+  <h1>Sonic Voyage</h1>
 
-    </body>
+  <section id="profile">
+    <h2>Welcome, <span id="displayName"></span>!</h2>
+    <span id="avatar"></span>
+    <ul>
+      <!-- <li>User ID: <span id="id"></span></li>
+      <li>Email: <span id="email"></span></li>
+      <li>Spotify URI: <a id="uri" href="#"></a></li>
+      <li>Link: <a id="url" href="#"></a></li> -->
+      <!-- <li>Profile Image: <span id="imgUrl"></span></li> -->
+    </ul>
+
+    <!-- Include the HTML list for recent tracks -->
+    <div id="recentTracksContainer">
+      <h2>Recent Tracks</h2>
+      <ul id="recentTracks"></ul>
+    </div>
+
+  </section>
+
+  <div id="tempodiv">
+    <h2>Average Tempo for Recent Tracks: </h2>
+    <span id="tempo"></span>
+  </div>
+
+  <!-- 
+    Features: 
+      Acousticness
+      Danceability
+      Energy
+      Instrumentalness
+      Liveness
+      Loudness
+      Speechiness
+      Tempo 
+      Valence  
+  -->
+  <h2>Song Analysis</h2>
+
+  <table id="songTable">
+    <tr>
+      <th>Songs</th>
+      <th>Recent</th>
+      <th>Top last month</th>
+      <th>Top of all time</th>
+    </tr>
+    <tr>
+      <td>Acousticness</td>
+      <td id="recentAcousticness"></td>
+      <td id="topShortAcousticness"></td>
+      <td id="topLongAcousticness"></td>
+    </tr>
+    <tr>
+      <td>Danceability</td>
+      <td id="recentDanceability"></td>
+      <td id="topShortDanceability"></td>
+      <td id="topLongDanceability"></td>
+    </tr>
+    <!-- Repeat for other features -->
+    <tr>
+      <td>Energy</td>
+      <td id="recentEnergy"></td>
+      <td id="topShortEnergy"></td>
+      <td id="topLongEnergy"></td>
+    </tr>
+    <tr>
+      <td>Instrumentalness</td>
+      <td id="recentInstrumentalness"></td>
+      <td id="topShortInstrumentalness"></td>
+      <td id="topLongInstrumentalness"></td>
+    </tr>
+    <tr>
+      <td>Liveness</td>
+      <td id="recentLiveness"></td>
+      <td id="topShortLiveness"></td>
+      <td id="topLongLiveness"></td>
+    </tr>
+    <tr>
+      <td>Loudness</td>
+      <td id="recentLoudness"></td>
+      <td id="topShortLoudness"></td>
+      <td id="topLongLoudness"></td>
+    </tr>
+    <tr>
+      <td>Speechiness</td>
+      <td id="recentSpeechiness"></td>
+      <td id="topShortSpeechiness"></td>
+      <td id="topLongSpeechiness"></td>
+    </tr>
+    <tr>
+      <td>Tempo</td>
+      <td id="recentTempo"></td>
+      <td id="topShortTempo"></td>
+      <td id="topLongTempo"></td>
+    </tr>
+    <tr>
+      <td>Valence</td>
+      <td id="recentValence"></td>
+      <td id="topShortValence"></td>
+      <td id="topLongValence"></td>
+    </tr>
+  </table>
+
+</body>
+
 </html>
