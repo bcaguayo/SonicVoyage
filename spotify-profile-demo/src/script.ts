@@ -15,35 +15,54 @@ if (!code) {
   redirectToAuthCodeFlow(client_id);
 } else {
   console.log("Code provided, fetching access token");
-  const accessToken = await getAccessToken(client_id, code);
-  // console.log('Token', accessToken);
-  const profile = await fetchProfile(accessToken);
-  console.log('Profile Object:', profile);
-  populateUI(profile);
-
-  const recentTracks = await fetchRecentTracks(accessToken);
-  console.log('Recent Tracks:', recentTracks);
-  if (recentTracks) {
-    populateTracks(recentTracks);
-  }
-
-  // Call the function with the recent tracks and the access token
-  const features = await getTrackFeatures(recentTracks, accessToken);
-  const properties = ['acousticness', 'danceability', 'energy', 'instrumentalness', 
-                      'liveness', 'loudness', 'speechiness', 'tempo', 'valence'];
-  const featuresMap = await getAverage(properties, features);
-  console.log(featuresMap);
-  populateSongTable(properties, featuresMap);
+  initializePageValues(code);
 }
 
+// ______________________________ INITIALIZERS ______________________________
 export async function redirectToAuthCodeFlow(clientId: string) {
   const params = new URLSearchParams();
   params.append("client_id", clientId);
   params.append("response_type", "code");
   params.append("redirect_uri", "http://localhost:5173/callback");
-  params.append("scope", "user-read-private user-read-email user-read-recently-played");
+  params.append("scope", "user-read-private user-read-email user-read-recently-played user-top-read");
 
   document.location = `https://accounts.spotify.com/authorize?${params.toString()}`;
+}
+
+async function initializePageValues(code : string) {
+  // 1. Get the access token
+  const accessToken = await getAccessToken(client_id, code);
+
+  // 2. Fetch the user's profile data
+  const profile = await fetchProfile(accessToken);
+  populateUI(profile);
+
+  // 3. Fetch the user's recent tracks
+  const recentTracks = await fetchRecentTracks(accessToken);
+  if (recentTracks) {
+    populateTracks(recentTracks);
+  }
+
+  // 4. Fetch the user's top genres
+  const topGenres = await fetchTopArtists(accessToken, 'long_term');
+  if (topGenres) {
+    populateGenres(topGenres);
+  }
+
+  // 5. Fetch the user's audio features
+  const properties = ['acousticness', 'danceability', 'energy', 'instrumentalness', 
+                      'liveness', 'loudness', 'speechiness', 'tempo', 'valence'];
+
+  // 5a. Fetch audio features for recent tracks
+  const recentFeatures = await getTrackFeatures(recentTracks, accessToken);
+  const recentfeaturesMap = await getAverage(properties, recentFeatures);
+  populateSongTable(properties, recentfeaturesMap, 'recent');
+
+  // 5b. Fetch audio features for top tracks
+  // const topTracks = await fetchTopTracks(accessToken, 'long_term');
+  // const topFeatures = await getTrackFeatures(topTracks, accessToken);
+  // const topFeaturesMap = await getAverage(properties, topFeatures);
+  // populateSongTable(properties, topFeaturesMap, 'topLong');
 }
 
 export async function getAccessToken(clientId: string, code: string): Promise<string> {
@@ -56,13 +75,15 @@ export async function getAccessToken(clientId: string, code: string): Promise<st
 
   const result = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {"Content-Type": "application/x-www-form-urlencoded" },
     body: params
   });
 
   const { access_token } = await result.json();
   return access_token;
 }
+
+// ______________________________ PROFILE SECTION ______________________________
 
 /**
  * Fetches the user's Spotify profile using the provided access token.
@@ -84,19 +105,6 @@ async function fetchProfile(token: string) {
 }
 
 /**
- * Fetches the user's Spotify profile using the provided access token.
- * @param token The access token for authenticating the API request.
- * @returns A Promise that resolves to the user's profile data.
-//  */
-// async function fetchProfile(token: string): Promise<any> {
-//     const result = await fetch("https://api.spotify.com/v1/me", {
-//         method: "GET", headers: { Authorization: `Bearer ${token}` }
-//     });
-
-//     return await result.json();
-// }
-
-/**
  * Updates the UI with the user's profile information.
  * @param profile The user's profile data.
  */
@@ -109,6 +117,8 @@ function populateUI(profile: any) {
     document.getElementById("avatar")!.appendChild(profileImage);
   }
 }
+
+// ______________________________ RECENT TRACKS ______________________________
 
 // Function to fetch recent tracks
 async function fetchRecentTracks(token: string) {
@@ -144,73 +154,79 @@ function populateTracks(recentTracks: { items: any[]; }) {
   });
 }
 
-// Function to fetch audio features for tracks
-async function getAverageTempoForTracks(recentTracks: { items: any[]; }, token: string) {
-  // Extract Spotify IDs from recently played tracks
-  const trackIds = recentTracks.items.map((track) => track.track.id);
+// ______________________________ TOP TRACKS ______________________________
 
-  // Check if there are any tracks to fetch audio features for
-  if (trackIds.length === 0) {
-    console.error("No track IDs available for recently played tracks.");
+async function fetchTopTracks(token: string, term : string) {
+  const result = await fetch("https://api.spotify.com/v1/me/top/tracks?time_range=${term}&limit=50", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!result.ok) {
+    console.error("Error fetching top tracks:", result.statusText);
+    return null;
+  }
+
+  const topTracks = await result.json();
+  console.log("Top tracks:", topTracks);
+  return topTracks;
+}
+
+// ______________________________ TOP GENRES ______________________________
+
+async function fetchTopArtists(token: string, term : string) {
+  const query = `https://api.spotify.com/v1/me/top/artists?time_range=${term}&limit=50`;
+  const result = await fetch(query, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!result.ok) {
+    console.error("Error fetching top genres:", result.statusText);
+    return null;
+  }
+
+  const topArtists = await result.json();
+  return topArtists;
+}
+
+// Function to populate the HTML with top genres
+function populateGenres(topGenres: { items: any[]; }, limit : number = 15) {
+  const topGenresList = document.getElementById("topGenres");
+  if (!topGenresList) {
+    console.error("No top genres list element found.");
     return;
   }
 
-  // Ensure the number of IDs does not exceed the maximum allowed (100 IDs)
-  const maxIdsPerRequest = 100;
-  const tracks = [];
-  for (let i = 0; i < trackIds.length; i += maxIdsPerRequest) {
-    tracks.push(trackIds.slice(i, i + maxIdsPerRequest));
-  }
+  topGenresList.innerHTML = ""; // Clear previous content
 
-  // Fetch audio features for each chunk of track IDs
-  const tempoArray = [];
-  for (const track of tracks) {
-    const idsQueryString = track.join(',');
-    const audioFeaturesUrl = `https://api.spotify.com/v1/audio-features?ids=${idsQueryString}`;
+  console.log(topGenres.items);
 
-    const audioFeaturesResult = await fetch(audioFeaturesUrl, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!audioFeaturesResult.ok) {
-      console.error(`Error fetching audio features: ${audioFeaturesResult.statusText}`);
-      return;
+  let genresList : any[] = [];
+  topGenres.items.forEach((genre) => {
+    const genreItem = document.createElement("li");
+    console.log(genre.genres.items);
+    for (let i = 0; i < genre.genres.length; i++) {
+      if (!genresList.includes(genre.genres[i])) {
+        genresList.push(genre.genres[i]);
+      }      
     }
+  });
 
-    const audioFeaturesData = await audioFeaturesResult.json();
-
-    // Extract the tempo from each audio feature and add it to the array
-    tempoArray.push(...audioFeaturesData.audio_features.map((feature: { tempo: any; }) => feature.tempo));
+  for (let i = 0; i < limit; i++) {
+    const genreItem = document.createElement("li");
+    genreItem.innerText = genresList[i];
+    topGenresList.appendChild(genreItem);
   }
-
-  var averageTempo = 0;
-  // Calculate the average tempo
-  if (tempoArray.length > 0) {
-    averageTempo = tempoArray.reduce((sum, tempo) => sum + tempo, 0) / tempoArray.length;
-    console.log("Average Tempo for Recently Played Tracks:", averageTempo);
-  } else {
-    console.error("No tempo data available for recently played tracks.");
-  }
-  return averageTempo;
 }
 
-async function displayAverageTempo(recentTracks: any, token: string) {
-  try {
-    const tempo = await getAverageTempoForTracks(recentTracks, token);
-    if (!tempo) {
-      console.error("No tempo data available.");
-      return;
-    }
-    document.getElementById("tempo")!.innerText = tempo.toFixed(2); // Assuming you want to display the tempo with two decimal places
-  } catch (error) {
-    console.error("Error getting average tempo:", error);
-  }
-}
+// ____________________ FEATURES FOR TOP TRACKS IN EACH GENRE ____________________
+
+///// __________________________ AUDIO FEATURES __________________________ /////
 
 // Function to fetch audio features for tracks
-async function getTrackFeatures(recentTracks: { items: any[]; }, token: string) {
-  const trackIds = recentTracks.items.map((track) => track.track.id);
+async function getTrackFeatures(tracks: { items: any[]; }, token: string) {
+  const trackIds = tracks.items.map((track) => track.track.id);
 
   if (trackIds.length === 0) {
     console.error("No track IDs available for recently played tracks.");
@@ -280,7 +296,7 @@ function makeName(filter :string, property : string) {
 }
 
 // Function to populate the table with song analysis data
-async function populateSongTable(properties : string[], features: Map<string, number>) {
+async function populateSongTable(properties : string[], features: Map<string, number>, filter : string) {
 
   // Check if the data is available
   if (!features) {
@@ -288,7 +304,7 @@ async function populateSongTable(properties : string[], features: Map<string, nu
     return;
   }
   
-  const selector = makeSelector('recent', properties);
+  const selector = makeSelector(filter, properties);
 
   console.log('selector: ' + selector);
 
