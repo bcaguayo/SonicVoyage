@@ -28,7 +28,6 @@ if (!code) {
   }
 
   // Call the function with the recent tracks and the access token
-  displayAverageTempo(recentTracks, accessToken);
   const features = await getTrackFeatures(recentTracks, accessToken);
   const properties = ['acousticness', 'danceability', 'energy', 'instrumentalness', 
                       'liveness', 'loudness', 'speechiness', 'tempo', 'valence'];
@@ -109,13 +108,6 @@ function populateUI(profile: any) {
     profileImage.src = profile.images[1].url;
     document.getElementById("avatar")!.appendChild(profileImage);
   }
-  // document.getElementById("id")!.innerText = profile.id;
-  // document.getElementById("email")!.innerText = profile.email;
-  // document.getElementById("uri")!.innerText = profile.uri;
-  // document.getElementById("uri")!.setAttribute("href", profile.external_urls.spotify);
-  // document.getElementById("url")!.innerText = profile.href;
-  // document.getElementById("url")!.setAttribute("href", profile.href);
-  // document.getElementById("imgUrl")!.innerText = profile.images[0]?.url ?? '(no profile image)';
 }
 
 // Function to fetch recent tracks
