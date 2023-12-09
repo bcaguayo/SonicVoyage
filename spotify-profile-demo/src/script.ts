@@ -29,7 +29,7 @@ export async function redirectToAuthCodeFlow(clientId: string) {
   document.location = `https://accounts.spotify.com/authorize?${params.toString()}`;
 }
 
-async function initializePageValues(code : string) {
+async function initializePageValues(code: string) {
   // 1. Get the access token
   const accessToken = await getAccessToken(client_id, code);
 
@@ -50,19 +50,27 @@ async function initializePageValues(code : string) {
   }
 
   // 5. Fetch the user's audio features
-  const properties = ['acousticness', 'danceability', 'energy', 'instrumentalness', 
-                      'liveness', 'loudness', 'speechiness', 'tempo', 'valence'];
+  const properties = ['acousticness', 'danceability', 'energy', 'instrumentalness',
+    'liveness', 'loudness', 'speechiness', 'tempo', 'valence'];
 
   // 5a. Fetch audio features for recent tracks
-  const recentFeatures = await getTrackFeatures(recentTracks, accessToken);
+  // THIS IS NO LONGER FAILING YAY
+  const recentFeatures = await getTrackFeatures(true, recentTracks, accessToken);
   const recentfeaturesMap = await getAverage(properties, recentFeatures);
+  // Print each value of recentfeaturesMap
   populateSongTable(properties, recentfeaturesMap, 'recent');
 
-  // 5b. Fetch audio features for top tracks
-  // const topTracks = await fetchTopTracks(accessToken, 'long_term');
-  // const topFeatures = await getTrackFeatures(topTracks, accessToken);
-  // const topFeaturesMap = await getAverage(properties, topFeatures);
-  // populateSongTable(properties, topFeaturesMap, 'topLong');
+  // 5b. Fetch audio features for top tracks of the last 4 weeks
+  const topSTracks = await fetchTopTracks(accessToken, false);
+  const topSFeatures = await getTrackFeatures(false, topSTracks, accessToken);
+  const topSFeaturesMap = await getAverage(properties, topSFeatures);
+  populateSongTable(properties, topSFeaturesMap, 'topShort');
+
+  // 5c. Fetch audio features for top tracks of the last year
+  const topTracks = await fetchTopTracks(accessToken, true);
+  const topFeatures = await getTrackFeatures(false, topTracks, accessToken);
+  const topFeaturesMap = await getAverage(properties, topFeatures);
+  populateSongTable(properties, topFeaturesMap, 'topLong');
 }
 
 export async function getAccessToken(clientId: string, code: string): Promise<string> {
@@ -75,7 +83,7 @@ export async function getAccessToken(clientId: string, code: string): Promise<st
 
   const result = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
-    headers: {"Content-Type": "application/x-www-form-urlencoded" },
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params
   });
 
@@ -133,7 +141,6 @@ async function fetchRecentTracks(token: string) {
   }
 
   const recentTracks = await result.json();
-  // console.log("Recent tracks:", recentTracks);
   return recentTracks;
 }
 
@@ -156,8 +163,11 @@ function populateTracks(recentTracks: { items: any[]; }) {
 
 // ______________________________ TOP TRACKS ______________________________
 
-async function fetchTopTracks(token: string, term : string) {
-  const result = await fetch("https://api.spotify.com/v1/me/top/tracks?time_range=${term}&limit=50", {
+async function fetchTopTracks(token: string, long: boolean) {
+  const queryLong = `https://api.spotify.com/v1/me/top/tracks?time_range=long_term&limit=50`;
+  const queryShort = `https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=50`;
+  const query = long ? queryLong : queryShort;
+  const result = await fetch(query, {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -168,13 +178,12 @@ async function fetchTopTracks(token: string, term : string) {
   }
 
   const topTracks = await result.json();
-  console.log("Top tracks:", topTracks);
   return topTracks;
 }
 
 // ______________________________ TOP GENRES ______________________________
 
-async function fetchTopArtists(token: string, term : string) {
+async function fetchTopArtists(token: string, term: string) {
   const query = `https://api.spotify.com/v1/me/top/artists?time_range=${term}&limit=50`;
   const result = await fetch(query, {
     method: "GET",
@@ -191,7 +200,7 @@ async function fetchTopArtists(token: string, term : string) {
 }
 
 // Function to populate the HTML with top genres
-function populateGenres(topGenres: { items: any[]; }, limit : number = 15) {
+function populateGenres(topGenres: { items: any[]; }, limit: number = 15) {
   const topGenresList = document.getElementById("topGenres");
   if (!topGenresList) {
     console.error("No top genres list element found.");
@@ -200,16 +209,12 @@ function populateGenres(topGenres: { items: any[]; }, limit : number = 15) {
 
   topGenresList.innerHTML = ""; // Clear previous content
 
-  console.log(topGenres.items);
-
-  let genresList : any[] = [];
+  let genresList: any[] = [];
   topGenres.items.forEach((genre) => {
-    const genreItem = document.createElement("li");
-    console.log(genre.genres.items);
     for (let i = 0; i < genre.genres.length; i++) {
       if (!genresList.includes(genre.genres[i])) {
         genresList.push(genre.genres[i]);
-      }      
+      }
     }
   });
 
@@ -225,12 +230,13 @@ function populateGenres(topGenres: { items: any[]; }, limit : number = 15) {
 ///// __________________________ AUDIO FEATURES __________________________ /////
 
 // Function to fetch audio features for tracks
-async function getTrackFeatures(tracks: { items: any[]; }, token: string) {
-  const trackIds = tracks.items.map((track) => track.track.id);
+async function getTrackFeatures(recent : boolean, tracks: { items: any[]; }, token: string) {
 
-  if (trackIds.length === 0) {
+  const trackIds = tracks.items.map((track) => recent ? track.track.id : track.id);
+
+  if (!trackIds) {
     console.error("No track IDs available for recently played tracks.");
-    return;
+    return [];
   }
 
   const maxIdsPerRequest = 100;
@@ -251,7 +257,7 @@ async function getTrackFeatures(tracks: { items: any[]; }, token: string) {
 
     if (!audioFeaturesResult.ok) {
       console.error(`Error fetching audio features: ${audioFeaturesResult.statusText}`);
-      return;
+      return [];
     }
 
     const audioFeaturesData = await audioFeaturesResult.json();
@@ -271,12 +277,11 @@ async function getAverage(properties: string[], features: any) {
     const average = propertyValues.reduce((sum: number, value: number) => sum + value, 0) / propertyValues.length;
 
     featuresMap.set(property, average);
-    // console.log(`Average ${property}:`, average);
   }
   return featuresMap;
 }
 
-function toStringPercent(n : number) {
+function toStringPercent(n: number) {
   return (n * 100).toFixed(2) + '%';
 }
 
@@ -291,37 +296,36 @@ function makeSelector(filter: string, properties: string[]) {
   return selector;
 }
 
-function makeName(filter :string, property : string) {
+function makeName(filter: string, property: string) {
   return filter + property.charAt(0).toUpperCase() + property.slice(1);
 }
 
 // Function to populate the table with song analysis data
-async function populateSongTable(properties : string[], features: Map<string, number>, filter : string) {
+async function populateSongTable(properties: string[], features: Map<string, number>, filter: string) {
 
   // Check if the data is available
   if (!features) {
     console.error('Failed to fetch song analysis data');
     return;
   }
-  
+
+  // Make the selector
   const selector = makeSelector(filter, properties);
 
-  console.log('selector: ' + selector);
-
   // Get the table cells
-  let recentCells = document.querySelectorAll(selector);
-
-  console.log('recentCellLength: ' + recentCells.length);
-  // const topShortCells = document.querySelectorAll(await makeSelector(properties, 'topShort'));
-  // const topLongCells = document.querySelectorAll(await makeSelector(properties, 'topLong'));
+  let cells = document.querySelectorAll(selector);
 
   // Loop through all table descriptions and populate with data
-  for (let i = 0; i < recentCells.length; i++) {
+  for (let i = 0; i < cells.length; i++) {
     let data = features.get(properties[i]);
-    if (data) {
-      const dataString = properties[i] == 'loudness' || properties[i] == 'tempo' ? 
-                          data.toFixed(2) : toStringPercent(data);
-      recentCells[i].textContent = dataString;
+    if (!data) {
+      console.error('No data available for ' + properties[i]);
+      continue;
+    }
+    const dataString = properties[i] == 'loudness' || properties[i] == 'tempo' ?
+      data.toFixed(2) : toStringPercent(data);
+    if (!cells[i].textContent) {
+      cells[i].textContent = dataString;
     }
   }
 }

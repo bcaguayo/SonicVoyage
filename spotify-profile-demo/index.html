@@ -4,30 +4,13 @@
 <head>
   <meta charset="utf-8">
   <title>SONIC VOYAGE</title>
+  <link rel="stylesheet" href="src/style.css">
   <script src="src/script.ts" type="module"></script>
-  <style>
-    table {
-      border-collapse: collapse;
-      width: 100%;
-    }
-
-    th,
-    td {
-      border: 1px solid #dddddd;
-      text-align: left;
-      padding: 8px;
-    }
-
-    th {
-      background-color: #f2f2f2;
-    }
-  </style>
 </head>
 
 <body>
-  <h1>Sonic Voyage</h1>
-
   <section id="profile">
+    <h1>Sonic Voyage</h1>
     <h2>Welcome, <span id="displayName"></span>!</h2>
     <span id="avatar"></span>
 
@@ -37,15 +20,13 @@
       <ul id="recentTracks"></ul>
     </div>
 
-     <!-- Include the HTML list for recent tracks -->
-     <div id="topGenresContainer">
+    <!-- Include the HTML list for recent tracks -->
+    <div id="topGenresContainer">
       <h2>Your Top Genres:</h2>
       <ul id="topGenres"></ul>
     </div>
 
-  </section>
-
-  <!-- 
+    <!-- 
     Features: 
       Acousticness
       Danceability
@@ -57,71 +38,78 @@
       Tempo 
       Valence  
   -->
-  <h2>Song Analysis</h2>
+    <h2>Song Analysis</h2>
 
-  <table id="songTable">
-    <tr>
-      <th>Songs</th>
-      <th>Recent Songs</th>
-      <th>Top Songs of Last Month</th>
-      <th>Top Songs Of All Time</th>
-    </tr>
-    <tr>
-      <td>Acousticness</td>
-      <td id="recentAcousticness"></td>
-      <td id="topShortAcousticness"></td>
-      <td id="topLongAcousticness"></td>
-    </tr>
-    <tr>
-      <td>Danceability</td>
-      <td id="recentDanceability"></td>
-      <td id="topShortDanceability"></td>
-      <td id="topLongDanceability"></td>
-    </tr>
-    <!-- Repeat for other features -->
-    <tr>
-      <td>Energy</td>
-      <td id="recentEnergy"></td>
-      <td id="topShortEnergy"></td>
-      <td id="topLongEnergy"></td>
-    </tr>
-    <tr>
-      <td>Instrumentalness</td>
-      <td id="recentInstrumentalness"></td>
-      <td id="topShortInstrumentalness"></td>
-      <td id="topLongInstrumentalness"></td>
-    </tr>
-    <tr>
-      <td>Liveness</td>
-      <td id="recentLiveness"></td>
-      <td id="topShortLiveness"></td>
-      <td id="topLongLiveness"></td>
-    </tr>
-    <tr>
-      <td>Loudness</td>
-      <td id="recentLoudness"></td>
-      <td id="topShortLoudness"></td>
-      <td id="topLongLoudness"></td>
-    </tr>
-    <tr>
-      <td>Speechiness</td>
-      <td id="recentSpeechiness"></td>
-      <td id="topShortSpeechiness"></td>
-      <td id="topLongSpeechiness"></td>
-    </tr>
-    <tr>
-      <td>Tempo</td>
-      <td id="recentTempo"></td>
-      <td id="topShortTempo"></td>
-      <td id="topLongTempo"></td>
-    </tr>
-    <tr>
-      <td>Valence</td>
-      <td id="recentValence"></td>
-      <td id="topShortValence"></td>
-      <td id="topLongValence"></td>
-    </tr>
-  </table>
+    <table id="songTable" style="max-width: 600px;">
+      <colgroup>
+        <col style="width: 19%;">
+        <col style="width: 27%;">
+        <col style="width: 27%;">
+        <col style="width: 27%;">
+      </colgroup>
+      <tr>
+        <th>Stats</th>
+        <th>Recent Songs</th>
+        <th>Top Songs of Last Month</th>
+        <th>Top Songs Of All Time</th>
+      </tr>
+      <tr>
+        <td>Acousticness</td>
+        <td id="recentAcousticness"></td>
+        <td id="topShortAcousticness"></td>
+        <td id="topLongAcousticness"></td>
+      </tr>
+      <tr>
+        <td>Danceability</td>
+        <td id="recentDanceability"></td>
+        <td id="topShortDanceability"></td>
+        <td id="topLongDanceability"></td>
+      </tr>
+      <!-- Repeat for other features -->
+      <tr>
+        <td>Energy</td>
+        <td id="recentEnergy"></td>
+        <td id="topShortEnergy"></td>
+        <td id="topLongEnergy"></td>
+      </tr>
+      <tr>
+        <td>Instrumentalness</td>
+        <td id="recentInstrumentalness"></td>
+        <td id="topShortInstrumentalness"></td>
+        <td id="topLongInstrumentalness"></td>
+      </tr>
+      <tr>
+        <td>Liveness</td>
+        <td id="recentLiveness"></td>
+        <td id="topShortLiveness"></td>
+        <td id="topLongLiveness"></td>
+      </tr>
+      <tr>
+        <td>Loudness</td>
+        <td id="recentLoudness"></td>
+        <td id="topShortLoudness"></td>
+        <td id="topLongLoudness"></td>
+      </tr>
+      <tr>
+        <td>Speechiness</td>
+        <td id="recentSpeechiness"></td>
+        <td id="topShortSpeechiness"></td>
+        <td id="topLongSpeechiness"></td>
+      </tr>
+      <tr>
+        <td>Tempo</td>
+        <td id="recentTempo"></td>
+        <td id="topShortTempo"></td>
+        <td id="topLongTempo"></td>
+      </tr>
+      <tr>
+        <td>Valence</td>
+        <td id="recentValence"></td>
+        <td id="topShortValence"></td>
+        <td id="topLongValence"></td>
+      </tr>
+    </table>
+  </section>
 
 </body>
 
