@@ -55,24 +55,44 @@ async function initializePageValues(code: string) {
 
   // 5a. Fetch audio features for recent tracks
   // THIS IS NO LONGER FAILING YAY
-  const recentFeatures = await getTrackFeatures(true, recentTracks, accessToken);
+  const recentFeatures = await getTrackFeatures(0, [], recentTracks, accessToken);
   const recentfeaturesMap = await getAverage(properties, recentFeatures);
   // Print each value of recentfeaturesMap
   populateSongTable(properties, recentfeaturesMap, 'recent');
 
   // 5b. Fetch audio features for top tracks of the last 4 weeks
   const topSTracks = await fetchTopTracks(accessToken, false);
-  const topSFeatures = await getTrackFeatures(false, topSTracks, accessToken);
+  const topSFeatures = await getTrackFeatures(1, [], topSTracks, accessToken);
   const topSFeaturesMap = await getAverage(properties, topSFeatures);
   populateSongTable(properties, topSFeaturesMap, 'topShort');
 
   // 5c. Fetch audio features for top tracks of the last year
   const topTracks = await fetchTopTracks(accessToken, true);
-  const topFeatures = await getTrackFeatures(false, topTracks, accessToken);
+  const topFeatures = await getTrackFeatures(1, [], topTracks, accessToken);
   const topFeaturesMap = await getAverage(properties, topFeatures);
   populateSongTable(properties, topFeaturesMap, 'topLong');
+
+  // 5d. Fetch top songs by genre
+  const topSongsinGenre = await fetchTopSongsByGenre(accessToken, 'pop');
+  console.log('topSongsinGenre');
+  // Print top songs in genre
+  const songFeatures = await getTrackFeatures(2, topSongsinGenre, topTracks, accessToken);
+  const topSongFeaturesMap = await getAverage(properties, songFeatures);
+
+  // Print Features
+  topSongFeaturesMap.forEach((value, key) => {
+    console.log(key + ' = ' + value);
+  });
+
+  // Print song features
+  
+
+  // const topSongsFeatures = await getTrackFeatures(false, topSongsinGenre, accessToken);
 }
 
+
+
+// ______________________________ ACCESS TOKEN ______________________________
 export async function getAccessToken(clientId: string, code: string): Promise<string> {
   const params = new URLSearchParams();
   params.append("client_id", clientId);
@@ -227,12 +247,42 @@ function populateGenres(topGenres: { items: any[]; }, limit: number = 15) {
 
 // ____________________ FEATURES FOR TOP TRACKS IN EACH GENRE ____________________
 
+// Function to fetch top songs by genre
+async function fetchTopSongsByGenre(token: string, genre: string, limit: number = 50) {
+  const query = `https://api.spotify.com/v1/search?q=genre:${encodeURIComponent(genre)}&type=track&limit=${limit}`;
+  const result = await fetch(query, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!result.ok) {
+    console.error("Error fetching top songs by genre:", result.statusText);
+    return null;
+  }
+
+  const topSongs = await result.json();
+  return topSongs.tracks.items;
+}
+
 ///// __________________________ AUDIO FEATURES __________________________ /////
 
-// Function to fetch audio features for tracks
-async function getTrackFeatures(recent : boolean, tracks: { items: any[]; }, token: string) {
+async function fetchTrackIds(recent : boolean, tracks: { items: any[]; }) {
+  return tracks.items.map((track) => recent ? track.track.id : track.id);;
+}
 
-  const trackIds = tracks.items.map((track) => recent ? track.track.id : track.id);
+async function fetchGenreIds(songs: any[]) {
+  let songIds: any[] = [];
+  songs.forEach((song: any) => {
+    songIds.push(song.id);
+  });
+  return songIds;
+}
+
+// Function to fetch audio features for tracks
+async function getTrackFeatures(bit : number, songs: any[], tracks: { items: any[]; }, token: string) {
+
+  // Get the track IDs
+  const trackIds = bit == 2 ? await fetchGenreIds(songs) : await fetchTrackIds(bit == 0, tracks);
 
   if (!trackIds) {
     console.error("No track IDs available for recently played tracks.");
